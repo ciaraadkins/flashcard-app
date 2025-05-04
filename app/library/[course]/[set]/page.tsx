@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Upload } from '@/types';
-import { BookOpenIcon, CalendarIcon, PhotoIcon, ChevronLeftIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { BookOpenIcon, CalendarIcon, PhotoIcon, ChevronLeftIcon, CheckCircleIcon, PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 export default function SetPage() {
   const params = useParams();
@@ -16,6 +16,8 @@ export default function SetPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedUploads, setSelectedUploads] = useState<string[]>([]);
   const [isSelectMode, setIsSelectMode] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(set);
 
   useEffect(() => {
     const fetchUploads = async () => {
@@ -43,6 +45,34 @@ export default function SetPage() {
 
     fetchUploads();
   }, [course, set]);
+
+  const handleEdit = () => {
+    setIsEditing(true);
+    setEditValue(set);
+  };
+
+  const handleSave = async () => {
+    try {
+      const response = await fetch('/api/groups/rename', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ course, oldName: set, newName: editValue }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to rename set');
+      
+      // Redirect to the updated URL
+      router.replace(`/library/${encodeURIComponent(course)}/${encodeURIComponent(editValue)}`);
+    } catch (err) {
+      setError('Failed to update set name');
+      console.error(err);
+    }
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditValue(set);
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -114,14 +144,48 @@ export default function SetPage() {
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-4 mb-4">
-            <Link href={`/library/${encodeURIComponent(course)}`} className="text-gray-400 hover:text-gray-600">
-              <ChevronLeftIcon className="w-6 h-6" />
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{set}</h1>
-              <p className="text-sm text-gray-600">{course}</p>
+          <Link href={`/library/${encodeURIComponent(course)}`} className="text-gray-400 hover:text-gray-600">
+          <ChevronLeftIcon className="w-6 h-6" />
+          </Link>
+          <div className="flex-1">
+          <div className="flex items-center gap-2">
+            {isEditing ? (
+                <>
+                    <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="text-3xl font-bold bg-gray-50 px-3 py-1 rounded border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        autoFocus
+                      />
+                      <button
+                        onClick={handleSave}
+                        className="p-1.5 text-green-600 hover:bg-green-50 rounded-full"
+                      >
+                        <CheckIcon className="w-6 h-6" />
+                      </button>
+                      <button
+                        onClick={handleCancel}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-full"
+                      >
+                        <XMarkIcon className="w-6 h-6" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <h1 className="text-3xl font-bold text-gray-900">{set}</h1>
+                      <button
+                        onClick={handleEdit}
+                        className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full"
+                      >
+                        <PencilIcon className="w-6 h-6" />
+                      </button>
+                    </>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600">{course}</p>
+              </div>
             </div>
-          </div>
           <Link href={`/upload?course=${encodeURIComponent(course)}&group=${encodeURIComponent(set)}`} className="inline-flex items-center px-4 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors w-full justify-center">
             + New Flashcards
           </Link>

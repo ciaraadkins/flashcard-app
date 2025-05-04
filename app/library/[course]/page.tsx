@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { BookOpenIcon, ChevronRightIcon, ChevronLeftIcon } from '@heroicons/react/24/outline';
+import { BookOpenIcon, ChevronRightIcon, ChevronLeftIcon, PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 export default function CoursePage() {
   const params = useParams();
@@ -11,6 +11,8 @@ export default function CoursePage() {
   const [sets, setSets] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState('');
 
   useEffect(() => {
     const fetchSets = async () => {
@@ -29,6 +31,37 @@ export default function CoursePage() {
 
     fetchSets();
   }, [course]);
+
+  const handleEdit = (index: number, currentName: string) => {
+    setEditingIndex(index);
+    setEditValue(currentName);
+  };
+
+  const handleSave = async (index: number, oldName: string) => {
+    try {
+      const response = await fetch('/api/groups/rename', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ course, oldName, newName: editValue }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to rename set');
+      
+      // Update local state
+      const updatedSets = [...sets];
+      updatedSets[index] = editValue;
+      setSets(updatedSets);
+      setEditingIndex(null);
+    } catch (err) {
+      setError('Failed to update set name');
+      console.error(err);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditingIndex(null);
+    setEditValue('');
+  };
 
   if (isLoading) {
     return (
@@ -83,21 +116,59 @@ export default function CoursePage() {
         ) : (
           <div className="space-y-4">
             {sets.map((set, index) => (
-              <Link
-                key={index}
-                href={`/library/${encodeURIComponent(course)}/${encodeURIComponent(set)}`}
-                className="block"
-              >
-                <div className="card hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <BookOpenIcon className="w-6 h-6 text-indigo-600" />
-                      <span className="text-lg font-semibold text-gray-900">{set}</span>
-                    </div>
-                    <ChevronRightIcon className="w-5 h-5 text-gray-400" />
+              <div key={index} className="card hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 flex-1">
+                    <BookOpenIcon className="w-6 h-6 text-indigo-600" />
+                    {editingIndex === index ? (
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="text-lg font-semibold bg-gray-50 px-3 py-1 rounded border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 flex-1"
+                        autoFocus
+                      />
+                    ) : (
+                      <Link href={`/library/${encodeURIComponent(course)}/${encodeURIComponent(set)}`} className="flex-1 text-lg font-semibold text-gray-900">
+                        {set}
+                      </Link>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {editingIndex === index ? (
+                      <>
+                        <button
+                          onClick={() => handleSave(index, set)}
+                          className="p-1.5 text-green-600 hover:bg-green-50 rounded-full"
+                        >
+                          <CheckIcon className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={handleCancel}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-full"
+                        >
+                          <XMarkIcon className="w-5 h-5" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleEdit(index, set);
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full"
+                        >
+                          <PencilIcon className="w-5 h-5" />
+                        </button>
+                        <Link href={`/library/${encodeURIComponent(course)}/${encodeURIComponent(set)}`}>
+                          <ChevronRightIcon className="w-5 h-5 text-gray-400" />
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}
