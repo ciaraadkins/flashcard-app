@@ -56,13 +56,13 @@ class AirtableService {
   }
 
   async getFlashcards(uploadId?: string): Promise<Flashcard[]> {
-    const options: any = {};
-    if (uploadId) {
-      options.filterByFormula = `{uploadId} = '${uploadId}'`;
-    }
-    const records = await this.base(this.table1Name)
-      .select(options)
-      .all();
+    const records = uploadId 
+      ? await this.base(this.table1Name)
+          .select({ filterByFormula: `{uploadId} = '${uploadId}'` })
+          .all()
+      : await this.base(this.table1Name)
+          .select()
+          .all();
 
     return records.map(record => ({
       id: record.id,
