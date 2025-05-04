@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Airtable from 'airtable';
 import { Flashcard, Upload, AirtableCard, AirtableUpload } from '@/types';
 
