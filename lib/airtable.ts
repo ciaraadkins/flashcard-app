@@ -61,7 +61,7 @@ class AirtableService {
           .select({ filterByFormula: `{uploadId} = '${uploadId}'` })
           .all()
       : await this.base(this.table1Name)
-          .select()
+          .select({})
           .all();
 
     return records.map(record => ({

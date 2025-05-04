@@ -7,6 +7,12 @@ export async function GET() {
     const flashcards = await airtableService.getFlashcards();
     console.log('Flashcards count:', flashcards.length);
     
+    // Early return if no flashcards exist
+    if (!flashcards || flashcards.length === 0) {
+      console.log('No flashcards found');
+      return NextResponse.json({ courses: [] });
+    }
+    
     // Extract unique courses from flashcards
     const courses = Array.from(
       new Set(
