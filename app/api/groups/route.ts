@@ -2,9 +2,19 @@ import { NextResponse } from 'next/server';
 import { airtableService } from '@/lib/airtable';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
+// Removing edge runtime as it doesn't fully support Airtable library
+// export const runtime = 'edge';
 
 export async function GET(request: Request) {
+  // Validate environment variables
+  if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
+    console.error('Missing Airtable environment variables');
+    return NextResponse.json(
+      { error: 'Server configuration error', details: 'Missing Airtable credentials' },
+      { status: 500 }
+    );
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const course = searchParams.get('course');
