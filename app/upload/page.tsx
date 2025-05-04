@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { PhotoIcon, ArrowUpTrayIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
-export default function Upload() {
+function UploadContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [images, setImages] = useState<File[]>([]);
@@ -319,5 +319,13 @@ export default function Upload() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function Upload() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <UploadContent />
+    </Suspense>
   );
 }
