@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import Airtable from 'airtable';
+import { BatchProcessor } from '@/lib/batch-processor';
 
 export async function POST(request: Request) {
   try {
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
     }
 
-    // Update all records to new group name
+    // Prepare updates
     const updates = records.map(record => ({
       id: record.id,
       fields: {
@@ -29,7 +30,8 @@ export async function POST(request: Request) {
       },
     }));
 
-    await table.update(updates);
+    // Process in batches using BatchProcessor
+    await BatchProcessor.batchUpdate(table, updates);
 
     return NextResponse.json({ success: true });
   } catch (error) {

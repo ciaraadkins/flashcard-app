@@ -1,6 +1,7 @@
 // @ts-nocheck
 import Airtable from 'airtable';
 import { Flashcard, Upload, AirtableCard, AirtableUpload } from '@/types';
+import { BatchProcessor } from './batch-processor';
 
 class AirtableService {
   private base: Airtable.Base;
@@ -17,54 +18,43 @@ class AirtableService {
     this.table2Name = process.env.AIRTABLE_TABLE_2_NAME || 'Uploads';
   }
 
-  async createFlashcards(cards: Omit<Flashcard, 'id'>[]): Promise<Flashcard[]> {
-    const allCreatedCards: Flashcard[] = [];
+  async createFlashcards(cards: Omit<Flashcard, 'id'>[]): Promise<Flashcard[]> {    
+    // Clean data before sending to Airtable
+    const cleanedCards = cards.map(card => {
+      const fields: any = {
+        front: card.front,
+        back: card.back,
+      };
+      
+      // Only add defined fields
+      if (card.course !== undefined) fields.course = card.course;
+      if (card.group !== undefined) fields.group = card.group;
+      if (card.uploadId !== undefined) fields.uploadId = card.uploadId;
+      
+      // Return wrapped in fields property for multiple record creation
+      return { fields };
+    });
     
-    // Chunk the cards into batches of 10 (Airtable limit)
-    const chunkSize = 10;
-    for (let i = 0; i < cards.length; i += chunkSize) {
-      const chunk = cards.slice(i, i + chunkSize);
+    console.log(`Creating ${cards.length} flashcards`);
+    
+    try {
+      // Use BatchProcessor to handle large datasets
+      const records = await BatchProcessor.batchCreate(this.base(this.table1Name), cleanedCards);
       
-      // Clean data before sending to Airtable
-      const cleanedCards = chunk.map(card => {
-        const fields: any = {
-          front: card.front,
-          back: card.back,
-        };
-        
-        // Only add defined fields
-        if (card.course !== undefined) fields.course = card.course;
-        if (card.group !== undefined) fields.group = card.group;
-        if (card.uploadId !== undefined) fields.uploadId = card.uploadId;
-        
-        // Return wrapped in fields property for multiple record creation
-        return { fields };
-      });
+      const createdCards = records.map(record => ({
+        id: record.id,
+        front: record.fields.front as string,
+        back: record.fields.back as string,
+        course: record.fields.course as string || undefined,
+        group: record.fields.group as string || undefined,
+        uploadId: record.fields.uploadId as string || undefined,
+      }));
       
-      // Debug logging
-      console.log(`Creating flashcards batch ${i / chunkSize + 1}:`, cleanedCards);
-      
-      try {
-        const records = await this.base(this.table1Name).create(cleanedCards);
-        
-        const createdCards = records.map(record => ({
-          id: record.id,
-          front: record.fields.front as string,
-          back: record.fields.back as string,
-          course: record.fields.course as string || undefined,
-          group: record.fields.group as string || undefined,
-          uploadId: record.fields.uploadId as string || undefined,
-        }));
-        
-        allCreatedCards.push(...createdCards);
-      } catch (error) {
-        console.error(`Error creating flashcards batch ${i / chunkSize + 1}:`, error);
-        console.error('Data that failed:', cleanedCards);
-        throw error;
-      }
+      return createdCards;
+    } catch (error) {
+      console.error('Error creating flashcards:', error);
+      throw error;
     }
-    
-    return allCreatedCards;
   }
 
   async getFlashcards(uploadId?: string): Promise<Flashcard[]> {

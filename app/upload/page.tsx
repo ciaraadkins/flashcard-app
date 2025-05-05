@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { PhotoIcon, ArrowUpTrayIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
-type ProgressStep = 'uploading' | 'analyzing' | 'generating' | 'finalizing' | 'complete';
+type ProgressStep = 'uploading' | 'analyzing-chunks' | 'analyzing-batch1' | 
+                    'analyzing-batch2' | 'finalizing-analysis' | 'generating' | 
+                    'finalizing' | 'complete';
 
 function UploadContent() {
   const router = useRouter();
@@ -87,8 +89,14 @@ function UploadContent() {
     switch (step) {
       case 'uploading':
         return 'Uploading images...';
-      case 'analyzing':
-        return 'Analyzing content...';
+      case 'analyzing-chunks':
+        return 'Creating flashcard chunks...';
+      case 'analyzing-batch1':
+        return 'Analyzing first 10 cards...';
+      case 'analyzing-batch2':
+        return 'Analyzing remaining cards...';
+      case 'finalizing-analysis':
+        return 'Finalizing content analysis...';
       case 'generating':
         return 'Generating flashcards...';
       case 'finalizing':
@@ -98,6 +106,25 @@ function UploadContent() {
       default:
         return '';
     }
+  };
+
+  const simulateDetailedProgress = async () => {
+    // Each substep with artificial delay
+    setProgressPercentage(20);
+    setProgressStep('analyzing-chunks');
+    await new Promise(resolve => setTimeout(resolve, 3000));
+  
+    setProgressPercentage(30);
+    setProgressStep('analyzing-batch1');
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  
+    setProgressPercentage(45);
+    setProgressStep('analyzing-batch2');
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  
+    setProgressPercentage(60);
+    setProgressStep('finalizing-analysis');
+    await new Promise(resolve => setTimeout(resolve, 2000));
   };
 
   const handleSubmit = async () => {
@@ -120,16 +147,18 @@ function UploadContent() {
       formData.append('course', course);
       formData.append('group', group);
 
-      // Simulate progress updates
-      setProgressPercentage(20);
-      setProgressStep('analyzing');
+      // Start the detailed progress simulation
+      const progressSimulation = simulateDetailedProgress();
       
       const response = await fetch('/api/process', {
         method: 'POST',
         body: formData,
       });
 
-      setProgressPercentage(60);
+      // Wait for the simulation to complete
+      await progressSimulation;
+
+      setProgressPercentage(70);
       setProgressStep('generating');
 
       if (!response.ok) {
