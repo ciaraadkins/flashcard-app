@@ -76,7 +76,7 @@ class AirtableService {
     }));
   }
 
-  async createUpload(upload: Omit<Upload, 'id'>): Promise<Upload> {
+  async createUpload(upload: Omit<Upload, 'id' | 'flashcardCount'>): Promise<Upload> {
     // Clean data before sending to Airtable
     const fields: any = {
       uploadId: `upload_${Date.now()}`, // Generate a unique uploadId
@@ -88,6 +88,7 @@ class AirtableService {
     // Only add defined fields
     if (upload.bookPage !== undefined) fields.bookPage = upload.bookPage;
     if (upload.course !== undefined) fields.course = upload.course;
+    if (upload.focusPrompt !== undefined) fields.focusPrompt = upload.focusPrompt; // Save focusPrompt
     
     console.log('Creating upload with data:', fields);
     
@@ -102,6 +103,7 @@ class AirtableService {
         bookPage: record.fields.bookPage as string || undefined,
         course: record.fields.course as string || undefined,
         imageCount: record.fields.imageCount as number,
+        focusPrompt: record.fields.focusPrompt as string || undefined, // Include focusPrompt in response
       };
     } catch (error) {
       console.error('Error creating upload:', error);
@@ -124,6 +126,7 @@ class AirtableService {
       bookPage: record.fields.bookPage as string,
       course: record.fields.course as string,
       imageCount: record.fields.imageCount as number,
+      focusPrompt: record.fields.focusPrompt as string || undefined, // Include focusPrompt in response
     }));
   }
 }

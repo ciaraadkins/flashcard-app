@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createOCRService } from '@/lib/ocr';
 import { createFlashcardGenerator } from '@/lib/flashcard-generator';
+import { createContentTitleGenerator } from '@/lib/content-title-generator';
 import { airtableService } from '@/lib/airtable';
 import { Flashcard } from '@/types';
 
@@ -9,23 +10,28 @@ function generateUploadTitle(
   cards: Omit<Flashcard, 'id'>[], 
   course?: string, 
   group?: string, 
-  prompt?: string
+  contentDescription?: string, // New parameter
+  incremental?: number // Track upload number within a group
 ): string {
-  // Use group if available, otherwise use course and card count
-  if (group) {
-    return group;
+  // If user provided content description, use it
+  if (contentDescription) {
+    return `${contentDescription} - ${cards.length} cards`;
   }
   
+  // If group is provided but no description, use group name with incremental
+  if (group && incremental && incremental > 1) {
+    return `${group} #${incremental} - ${cards.length} cards`;
+  }
+  
+  // If course but no group, use course and card count
   if (course) {
-    return `${course} - ${cards.length} cards`;
+    const increment = incremental ? ` #${incremental}` : '';
+    return `${course}${increment} - ${cards.length} cards`;
   }
   
-  // Fallback: use prompt or default title
-  if (prompt && prompt.length < 50) {
-    return prompt;
-  }
-  
-  return `Flashcards (${cards.length})`;
+  // Default with incremental
+  const increment = incremental ? ` #${incremental}` : '';
+  return `Study Set${increment} - ${cards.length} cards`;
 }
 
 // Generate a group name if none is provided
@@ -72,12 +78,22 @@ function generateGroupName(generatedCards: Omit<Flashcard, 'id'>[], prompt?: str
   return `Study Set - ${dateString}`;
 }
 
+// Get upload count for a specific group
+async function getUploadCountInGroup(course: string, group: string): Promise<number> {
+  const uploads = await airtableService.getUploads();
+  const filteredUploads = uploads.filter(upload => 
+    upload.course === course && upload.summary?.includes(group)
+  );
+  return filteredUploads.length + 1; // Return next number in sequence
+}
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const prompt = formData.get('prompt') as string;
     const course = formData.get('course') as string;
     const group = formData.get('group') as string;
+    const contentDescription = formData.get('contentDescription') as string; // Get content description
     
     // Get all uploaded images
     const images: File[] = [];
@@ -117,18 +133,41 @@ export async function POST(request: Request) {
       imageCount: images.length, // Pass the image count
     });
 
-    // Generate a meaningful title based on the content
-    const title = generateUploadTitle(generatedCards, course, group, prompt);
+    // If no content description provided, generate one using AI
+    let finalContentDescription = contentDescription;
+    if (!contentDescription && generatedCards.length > 0) {
+      try {
+        const contentTitleGenerator = createContentTitleGenerator();
+        finalContentDescription = await contentTitleGenerator.generateContentTitle(generatedCards);
+        console.log('AI-generated content title:', finalContentDescription);
+      } catch (error) {
+        console.error('Failed to generate content title:', error);
+        // Continue without AI-generated title
+      }
+    }
 
     // If no group is provided, generate one automatically
     const finalGroup = group || generateGroupName(generatedCards, prompt);
 
-    // Create upload record
+    // Get incremental number for uploads within the same group
+    const incrementalNumber = await getUploadCountInGroup(course, finalGroup);
+
+    // Generate a meaningful title based on the content
+    const title = generateUploadTitle(
+      generatedCards, 
+      course, 
+      finalGroup, 
+      finalContentDescription,
+      incrementalNumber
+    );
+
+    // Create upload record with focusPrompt
     const upload = await airtableService.createUpload({
       date: new Date().toISOString(),
       summary: title,
       course: course || undefined,
       imageCount: images.length,
+      focusPrompt: prompt || undefined, // Save the focus prompt
     });
 
     // Create flashcards in Airtable with upload ID

@@ -57,7 +57,26 @@ export async function GET(request: NextRequest) {
       .map(upload => ({
         ...upload,
         flashcardCount: flashcardCounts[upload.id] || 0
-      }));
+      }))
+      .sort((a, b) => {
+        // First sort by date (newest first)
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        if (dateB.getTime() !== dateA.getTime()) {
+          return dateB.getTime() - dateA.getTime();
+        }
+        
+        // Then by incremental number if present
+        const incrementA = a.summary.match(/#(\d+)/)?.[1];
+        const incrementB = b.summary.match(/#(\d+)/)?.[1];
+        
+        if (incrementA && incrementB) {
+          return parseInt(incrementA) - parseInt(incrementB);
+        }
+        
+        return 0;
+      });
+      
     console.log('Filtered uploads with flashcard counts:', uploads);
 
     return NextResponse.json({ uploads });

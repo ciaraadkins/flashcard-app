@@ -16,6 +16,7 @@ export interface Upload {
   course?: string;
   imageCount: number;
   flashcardCount?: number; // Added optional flashcardCount property
+  focusPrompt?: string; // Added optional focusPrompt property
 }
 
 export interface AirtableCard {
@@ -37,5 +38,6 @@ export interface AirtableUpload {
     bookPage?: string;
     course?: string;
     imageCount: number;
+    focusPrompt?: string; // Added optional focusPrompt property
   };
 }

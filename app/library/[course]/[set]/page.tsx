@@ -110,33 +110,55 @@ export default function SetPage() {
     }
   };
 
-  const FlashcardContent = ({ upload }: { upload: Upload }) => (
-    <div className="flex-1">
-      <h3 className="text-lg font-semibold text-gray-900 mb-1">
-        {upload.summary}
-      </h3>
-      <div className="flex items-center gap-4 text-sm text-gray-600">
-        <div className="flex items-center gap-1">
-          <CalendarIcon className="w-4 h-4" />
-          {formatDate(upload.date)}
-        </div>
-        <div className="flex items-center gap-1">
-          {/* Show flashcard count if available, otherwise fallback to image count with different icon */}
-          {upload.flashcardCount !== undefined ? (
-            <>
-              <SparklesIcon className="w-4 h-4" />
-              {upload.flashcardCount} card{upload.flashcardCount !== 1 ? 's' : ''}
-            </>
-          ) : (
-            <>
-              <PhotoIcon className="w-4 h-4" />
-              {upload.imageCount} image{upload.imageCount !== 1 ? 's' : ''}
-            </>
-          )}
+  // Extract the content description or main title from the summary
+  const getContentTitle = (summary: string) => {
+    // Remove the card count part if it exists (e.g., " - 25 cards")
+    const withoutCount = summary.replace(/ - \d+ cards?$/, '');
+    return withoutCount.trim();
+  };
+
+  const getCardCountFromSummary = (summary: string) => {
+    const match = summary.match(/(\d+) cards?$/);
+    return match ? parseInt(match[1]) : null;
+  };
+
+  const FlashcardContent = ({ upload }: { upload: Upload }) => {
+    const contentTitle = getContentTitle(upload.summary);
+    const cardCountFromTitle = getCardCountFromSummary(upload.summary);
+    const actualCardCount = upload.flashcardCount;
+    
+    return (
+      <div className="flex-1">
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+          {contentTitle}
+        </h3>
+        <div className="flex items-center gap-4 text-sm text-gray-600">
+          <div className="flex items-center gap-1">
+            <CalendarIcon className="w-4 h-4" />
+            {formatDate(upload.date)}
+          </div>
+          <div className="flex items-center gap-1">
+            {actualCardCount !== undefined ? (
+              <>
+                <SparklesIcon className="w-4 h-4" />
+                {actualCardCount} card{actualCardCount !== 1 ? 's' : ''}
+              </>
+            ) : cardCountFromTitle !== null ? (
+              <>
+                <SparklesIcon className="w-4 h-4" />
+                {cardCountFromTitle} card{cardCountFromTitle !== 1 ? 's' : ''}
+              </>
+            ) : (
+              <>
+                <PhotoIcon className="w-4 h-4" />
+                {upload.imageCount} image{upload.imageCount !== 1 ? 's' : ''}
+              </>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (isLoading) {
     return (
