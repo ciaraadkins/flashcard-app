@@ -38,8 +38,8 @@ export async function GET(request: NextRequest) {
     console.log('Filtered flashcards:', filteredFlashcards.length);
     console.log('Filtered flashcards sample:', filteredFlashcards[0]);
 
-    // Get unique uploadIds from flashcards
-    const uploadIds = [...new Set(filteredFlashcards.map(card => card.uploadId))].filter(Boolean);
+    // Get unique uploadIds from flashcards - filter out undefined values
+    const uploadIds = [...new Set(filteredFlashcards.map(card => card.uploadId))].filter((id): id is string => Boolean(id));
     console.log('UploadIds:', uploadIds);
 
     // Calculate flashcard count per uploadId
