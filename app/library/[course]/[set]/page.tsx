@@ -94,7 +94,10 @@ export default function SetPage() {
   const handleReviewSelected = () => {
     if (selectedUploads.length > 0) {
       const uploadIdsParam = selectedUploads.join(',');
-      router.push(`/review/${uploadIdsParam}`);
+      // Add a small delay to ensure URL is properly parsed
+      setTimeout(() => {
+        router.push(`/review/${uploadIdsParam}`);
+      }, 0);
     }
   };
 

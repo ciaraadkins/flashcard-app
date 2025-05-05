@@ -114,6 +114,7 @@ export async function POST(request: Request) {
     const generatedCards = await flashcardGenerator.generateFlashcards({
       extractedText: combinedText,
       prompt,
+      imageCount: images.length, // Pass the image count
     });
 
     // Generate a meaningful title based on the content

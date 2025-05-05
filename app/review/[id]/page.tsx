@@ -14,21 +14,25 @@ export default function Review() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // params.id can be a single uploadId or multiple uploadIds separated by commas
-  const uploadIds = params.id.toString().split(',');
+  // Force string conversion and split for multiple IDs
+  const paramId = params.id as string | string[];
+  const idString = Array.isArray(paramId) ? paramId[0] : paramId;
+  const uploadIds = idString.split(',').map(id => id.trim());
 
   useEffect(() => {
     const fetchFlashcards = async () => {
       try {
         let allFlashcards: Flashcard[] = [];
         
-        // Fetch flashcards for each uploadId
-        for (const uploadId of uploadIds) {
-          const response = await fetch(`/api/flashcards/${uploadId}`);
-          if (!response.ok) throw new Error('Failed to fetch flashcards');
-          const data = await response.json();
-          allFlashcards = [...allFlashcards, ...data.flashcards];
-        }
+        console.log('Raw params.id:', params.id);
+        console.log('uploadIds:', uploadIds);
+        console.log('uploadIds length:', uploadIds.length);
+        
+        // Use single API for all cases (it now handles multiple IDs internally)
+        const response = await fetch(`/api/flashcards/${params.id}`);
+        if (!response.ok) throw new Error('Failed to fetch flashcards');
+        const data = await response.json();
+        allFlashcards = data.flashcards;
         
         setFlashcards(allFlashcards);
       } catch (err) {

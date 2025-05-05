@@ -4,6 +4,7 @@ import { Flashcard } from '@/types';
 interface GenerateFlashcardsParams {
   extractedText: string;
   prompt?: string;
+  imageCount?: number; // Add imageCount parameter
 }
 
 export class FlashcardGenerator {
@@ -15,8 +16,9 @@ export class FlashcardGenerator {
     });
   }
 
-  async generateFlashcards({ extractedText, prompt }: GenerateFlashcardsParams): Promise<Omit<Flashcard, 'id'>[]> {
+  async generateFlashcards({ extractedText, prompt, imageCount = 1 }: GenerateFlashcardsParams): Promise<Omit<Flashcard, 'id'>[]> {
     try {
+      const maxCards = imageCount * 10; // Up to 10 cards per image
       const systemPrompt = `You are a helpful study assistant that creates flashcards from text content. 
       Create flashcards in the following format:
       FRONT: [Question or key concept]
@@ -27,7 +29,7 @@ export class FlashcardGenerator {
       - Avoid overly long answers
       - Create clear, testable questions
       - Format each card as shown above
-      - Create 5-10 cards per input
+      - Create up to ${maxCards} cards total (maximum 10 per image)
       ${prompt ? `Additional instructions: ${prompt}` : ''}`;
 
       const response = await this.openai.chat.completions.create({
