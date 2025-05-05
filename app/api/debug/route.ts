@@ -1,38 +1,46 @@
 import { NextResponse } from 'next/server';
 import { airtableService } from '@/lib/airtable';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
-    console.log('DEBUG: Starting debug endpoint');
-    
-    // Get all flashcards
+    console.log('Environment check:');
+    console.log('AIRTABLE_API_KEY present:', !!process.env.AIRTABLE_API_KEY);
+    console.log('AIRTABLE_BASE_ID:', process.env.AIRTABLE_BASE_ID);
+    console.log('AIRTABLE_TABLE_1_NAME:', process.env.AIRTABLE_TABLE_1_NAME);
+    console.log('AIRTABLE_TABLE_2_NAME:', process.env.AIRTABLE_TABLE_2_NAME);
+
+    // Test getting flashcards
     const flashcards = await airtableService.getFlashcards();
-    console.log('DEBUG: All flashcards:', flashcards);
+    console.log('Flashcards found:', flashcards.length);
     
-    // Get unique courses from flashcards
-    const courses = Array.from(
-      new Set(
-        flashcards
-          .map(card => card.course)
-          .filter(course => course && course !== '')
-      )
-    );
-    console.log('DEBUG: Unique courses:', courses);
+    // Test getting uploads
+    const uploads = await airtableService.getUploads();
+    console.log('Uploads found:', uploads.length);
+    
+    // Sample recent data
+    const recentFlashcards = flashcards.slice(0, 3);
+    const recentUploads = uploads.slice(0, 3);
     
     return NextResponse.json({
-      flashcards,
-      courses,
-      debug: {
-        flashcardCount: flashcards.length,
-        courseCount: courses.length,
-        sampleFlashcards: flashcards.slice(0, 3),
-      }
+      env: {
+        apiKeyPresent: !!process.env.AIRTABLE_API_KEY,
+        baseId: process.env.AIRTABLE_BASE_ID,
+        table1Name: process.env.AIRTABLE_TABLE_1_NAME,
+        table2Name: process.env.AIRTABLE_TABLE_2_NAME,
+      },
+      flashcardsCount: flashcards.length,
+      uploadsCount: uploads.length,
+      recentFlashcards,
+      recentUploads,
     });
   } catch (error) {
-    console.error('DEBUG: Error in debug endpoint:', error);
-    return NextResponse.json(
-      { error: 'Failed to debug', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    console.error('Debug error:', error);
+    return NextResponse.json({
+      error: 'Error in debug endpoint',
+      details: error.message,
+      stack: error.stack,
+    }, { status: 500 });
   }
 }
