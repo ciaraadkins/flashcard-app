@@ -42,12 +42,23 @@ export async function GET(request: NextRequest) {
     const uploadIds = [...new Set(filteredFlashcards.map(card => card.uploadId))].filter(Boolean);
     console.log('UploadIds:', uploadIds);
 
+    // Calculate flashcard count per uploadId
+    const flashcardCounts = uploadIds.reduce((acc, uploadId) => {
+      acc[uploadId] = filteredFlashcards.filter(card => card.uploadId === uploadId).length;
+      return acc;
+    }, {} as Record<string, number>);
+
     // Get uploads for these uploadIds
     const allUploads = await airtableService.getUploads();
     console.log('All uploads:', allUploads.map(u => ({ id: u.id, course: u.course, summary: u.summary })));
     
-    const uploads = allUploads.filter(upload => uploadIds.includes(upload.id));
-    console.log('Filtered uploads:', uploads);
+    const uploads = allUploads
+      .filter(upload => uploadIds.includes(upload.id))
+      .map(upload => ({
+        ...upload,
+        flashcardCount: flashcardCounts[upload.id] || 0
+      }));
+    console.log('Filtered uploads with flashcard counts:', uploads);
 
     return NextResponse.json({ uploads });
   } catch (error) {

@@ -15,6 +15,7 @@ export interface Upload {
   bookPage?: string;
   course?: string;
   imageCount: number;
+  flashcardCount?: number; // Added optional flashcardCount property
 }
 
 export interface AirtableCard {

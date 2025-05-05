@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Upload } from '@/types';
 import { BookOpenIcon, CalendarIcon, PhotoIcon, ChevronLeftIcon, CheckCircleIcon, PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { SparklesIcon } from '@heroicons/react/24/solid'; // For flashcard icon
 
 export default function SetPage() {
   const params = useParams();
@@ -120,8 +121,18 @@ export default function SetPage() {
           {formatDate(upload.date)}
         </div>
         <div className="flex items-center gap-1">
-          <PhotoIcon className="w-4 h-4" />
-          {upload.imageCount} card{upload.imageCount !== 1 ? 's' : ''}
+          {/* Show flashcard count if available, otherwise fallback to image count with different icon */}
+          {upload.flashcardCount !== undefined ? (
+            <>
+              <SparklesIcon className="w-4 h-4" />
+              {upload.flashcardCount} card{upload.flashcardCount !== 1 ? 's' : ''}
+            </>
+          ) : (
+            <>
+              <PhotoIcon className="w-4 h-4" />
+              {upload.imageCount} image{upload.imageCount !== 1 ? 's' : ''}
+            </>
+          )}
         </div>
       </div>
     </div>
