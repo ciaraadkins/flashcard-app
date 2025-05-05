@@ -152,6 +152,7 @@ function UploadContent() {
       // Start the detailed progress simulation
       const progressSimulation = simulateDetailedProgress();
       
+      console.log('Sending request to /api/process...');
       const response = await fetch('/api/process', {
         method: 'POST',
         body: formData,
@@ -163,11 +164,16 @@ function UploadContent() {
       setProgressPercentage(70);
       setProgressStep('generating');
 
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error('Failed to process images');
+        const errorData = await response.json();
+        console.error('Error response:', errorData);
+        throw new Error(errorData.error || 'Failed to process images');
       }
 
       const data = await response.json();
+      console.log('Success response:', data);
       
       setProgressPercentage(90);
       setProgressStep('finalizing');
@@ -183,8 +189,8 @@ function UploadContent() {
         router.push(`/review/${data.uploadId}`);
       }, 800);
     } catch (err) {
+      console.error('Error in handleSubmit:', err);
       setError('Failed to process images. Please try again.');
-      console.error(err);
       setProgressStep(null);
       setProgressPercentage(0);
     } finally {

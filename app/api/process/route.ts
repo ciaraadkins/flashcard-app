@@ -89,11 +89,14 @@ async function getUploadCountInGroup(course: string, group: string): Promise<num
 
 export async function POST(request: Request) {
   try {
+    console.log('Processing request - start');
     const formData = await request.formData();
     const prompt = formData.get('prompt') as string;
     const course = formData.get('course') as string;
     const group = formData.get('group') as string;
     const contentDescription = formData.get('contentDescription') as string; // Get content description
+    
+    console.log('Form data:', { course, group, contentDescription, prompt: prompt ? 'provided' : 'empty' });
     
     // Get all uploaded images
     const images: File[] = [];
@@ -102,6 +105,8 @@ export async function POST(request: Request) {
       if (image) images.push(image);
     }
 
+    console.log('Images found:', images.length);
+    
     if (images.length === 0) {
       return NextResponse.json(
         { error: 'No images provided' },
@@ -110,6 +115,7 @@ export async function POST(request: Request) {
     }
 
     // Process images with OCR
+    console.log('Starting OCR process...');
     const ocrService = createOCRService();
     const extractedTexts: string[] = [];
     
@@ -118,25 +124,31 @@ export async function POST(request: Request) {
       const base64Image = Buffer.from(buffer).toString('base64');
       const imageData = `data:${image.type};base64,${base64Image}`;
       
+      console.log('Extracting text from image...');
       const text = await ocrService.extractText(imageData);
       extractedTexts.push(text);
+      console.log('Text extracted, length:', text.length);
     }
 
     // Combine all extracted text
     const combinedText = extractedTexts.join('\n\n---\n\n');
+    console.log('Combined text length:', combinedText.length);
 
     // Generate flashcards
+    console.log('Generating flashcards...');
     const flashcardGenerator = createFlashcardGenerator();
     const generatedCards = await flashcardGenerator.generateFlashcards({
       extractedText: combinedText,
       prompt,
       imageCount: images.length, // Pass the image count
     });
+    console.log('Flashcards generated:', generatedCards.length);
 
     // If no content description provided, generate one using AI
     let finalContentDescription = contentDescription;
     if (!contentDescription && generatedCards.length > 0) {
       try {
+        console.log('Generating content title with AI...');
         const contentTitleGenerator = createContentTitleGenerator();
         finalContentDescription = await contentTitleGenerator.generateContentTitle(generatedCards);
         console.log('AI-generated content title:', finalContentDescription);
@@ -148,9 +160,11 @@ export async function POST(request: Request) {
 
     // If no group is provided, generate one automatically
     const finalGroup = group || generateGroupName(generatedCards, prompt);
+    console.log('Final group:', finalGroup);
 
     // Get incremental number for uploads within the same group
     const incrementalNumber = await getUploadCountInGroup(course, finalGroup);
+    console.log('Incremental number:', incrementalNumber);
 
     // Generate a meaningful title based on the content
     const title = generateUploadTitle(
@@ -160,8 +174,10 @@ export async function POST(request: Request) {
       finalContentDescription,
       incrementalNumber
     );
+    console.log('Generated title:', title);
 
     // Create upload record with focusPrompt
+    console.log('Creating upload record...');
     const upload = await airtableService.createUpload({
       date: new Date().toISOString(),
       summary: title,
@@ -169,6 +185,7 @@ export async function POST(request: Request) {
       imageCount: images.length,
       focusPrompt: prompt || undefined, // Save the focus prompt
     });
+    console.log('Upload created:', upload.id);
 
     // Create flashcards in Airtable with upload ID
     const cardsWithUploadId = generatedCards.map(card => ({
@@ -178,7 +195,9 @@ export async function POST(request: Request) {
       group: finalGroup, // Use finalGroup instead of group
     }));
 
+    console.log('Saving flashcards to Airtable...');
     const savedCards = await airtableService.createFlashcards(cardsWithUploadId);
+    console.log('Flashcards saved:', savedCards.length);
 
     return NextResponse.json({
       uploadId: upload.id,
@@ -186,6 +205,14 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('Error processing images:', error);
+    
+    // More detailed error logging
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    
     return NextResponse.json(
       { error: 'Failed to process images' },
       { status: 500 }
